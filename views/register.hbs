@@ -1,0 +1,50 @@
+<div class="auth-wrap">
+  <div class="auth-brand">
+    <svg class="brand-logo" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="16" cy="16" r="14" fill="url(#rgGrad)"/>
+      <path d="M10 11.5h12M10 16h8M10 20.5h10" stroke="white" stroke-width="2" stroke-linecap="round"/>
+      <defs>
+        <linearGradient id="rgGrad" x1="2" y1="2" x2="30" y2="30" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#3dd6be"/>
+          <stop offset="100%" stop-color="#1589a2"/>
+        </linearGradient>
+      </defs>
+    </svg>
+    <span class="brand-name">TaskAlloc</span>
+  </div>
+
+  <div class="auth-card">
+    <h1>Create an account</h1>
+    <p class="auth-subtitle">Join TaskAlloc and start collaborating</p>
+
+    <form action="/register" method="POST">
+      <div class="form-group">
+        <label class="form-label" for="username">Username</label>
+        <input class="form-input" type="text" id="username" name="username"
+               placeholder="yourhandle" autocomplete="username" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="email">Email</label>
+        <input class="form-input" type="email" id="email" name="email"
+               placeholder="you@example.com" autocomplete="email" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <input class="form-input" type="password" id="password" name="password"
+               placeholder="At least 8 characters" autocomplete="new-password" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="confirm">Confirm Password</label>
+        <input class="form-input" type="password" id="confirm" name="confirm"
+               placeholder="••••••••" autocomplete="new-password" required />
+      </div>
+      <button type="submit" class="btn btn-primary btn-block btn-lg" style="margin-top:10px;">
+        Create Account
+      </button>
+    </form>
+  </div>
+
+  <p class="auth-footer">
+    Already have an account? <a href="/login">Sign in</a>
+  </p>
+</div>

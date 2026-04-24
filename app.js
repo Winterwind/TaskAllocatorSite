@@ -1,22 +1,43 @@
 require('dotenv').config();
 
-var createError = require('http-errors');
-var express = require('express');
-var path = require('path');
-var cookieParser = require('cookie-parser');
-var logger = require('morgan');
-var session = require('express-session');
-var SequelizeStore = require('connect-session-sequelize')(session.Store);
-var bcrypt = require('bcrypt');
+const createError = require('http-errors');
+const express = require('express');
+const path = require('path');
+const cookieParser = require('cookie-parser');
+const logger = require('morgan');
+const session = require('express-session');
+const SequelizeStore = require('connect-session-sequelize')(session.Store);
+const bcrypt = require('bcrypt');
+const hbs = require('hbs');
 
-var sequelize = require('./db');
-var User = require('./models/User');
+const sequelize = require('./db');
+const { User, Project, ProjectMember, ProjectStar, Task, Solution, Contribution } = require('./models/index');
 
-var app = express();
+const app = express();
 
 // ── View engine ───────────────────────────────────────────────────────────────
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'hbs');
+
+// ── Handlebars helpers ────────────────────────────────────────────────────────
+hbs.registerHelper('formatDate', (date) => {
+  if (!date) return '';
+  return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+});
+
+// Deterministic avatar colour class based on username
+hbs.registerHelper('avatarColor', (username) => {
+  const colors = ['c-av-teal', 'c-av-blue', 'c-av-green', 'c-av-purple'];
+  let hash = 0;
+  for (let i = 0; i < (username || '').length; i++) {
+    hash = username.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length];
+});
+
+hbs.registerHelper('initial', (str) => (str ? str[0].toUpperCase() : '?'));
+hbs.registerHelper('eq',      (a, b) => a === b);
+hbs.registerHelper('gt',      (a, b) => a > b);
 
 // ── Core middleware ───────────────────────────────────────────────────────────
 app.use(logger('dev'));
@@ -26,23 +47,23 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ── Sessions ──────────────────────────────────────────────────────────────────
-var sessionStore = new SequelizeStore({ db: sequelize });
+const sessionStore = new SequelizeStore({ db: sequelize });
 
 app.use(session({
   secret: process.env.SESSION_SECRET || 'dev-secret-change-in-production',
   store: sessionStore,
   resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 7 * 24 * 60 * 60 * 1000 } // 1 week
+  cookie: { maxAge: 7 * 24 * 60 * 60 * 1000 }
 }));
 
 sessionStore.sync();
 
 // ── Inject current user into every view ──────────────────────────────────────
-app.use(async function (req, res, next) {
+app.use(async (req, res, next) => {
   if (req.session.userId) {
     try {
-      var user = await User.findByPk(req.session.userId, {
+      const user = await User.findByPk(req.session.userId, {
         attributes: ['id', 'username', 'email']
       });
       if (user) {
@@ -55,26 +76,26 @@ app.use(async function (req, res, next) {
 });
 
 // ── Auth guard ────────────────────────────────────────────────────────────────
-function requireAuth(req, res, next) {
+const requireAuth = (req, res, next) => {
   if (!req.session.userId) return res.redirect('/login');
   next();
-}
+};
 
 // ── Auth routes ───────────────────────────────────────────────────────────────
 
-app.get('/', function (req, res) {
+app.get('/', (req, res) => {
   res.redirect(req.session.userId ? '/profile' : '/login');
 });
 
-app.get('/login', function (req, res) {
+app.get('/login', (req, res) => {
   if (req.session.userId) return res.redirect('/profile');
   res.render('login', { title: 'Sign In', hideNav: true, bodyClass: 'auth-page' });
 });
 
-app.post('/login', async function (req, res) {
-  var { email, password } = req.body;
+app.post('/login', async (req, res, next) => {
+  const { email, password } = req.body;
   try {
-    var user = await User.findOne({ where: { email } });
+    const user = await User.findOne({ where: { email } });
     if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
       return res.render('login', {
         title: 'Sign In', hideNav: true, bodyClass: 'auth-page',
@@ -88,35 +109,31 @@ app.post('/login', async function (req, res) {
   }
 });
 
-app.get('/register', function (req, res) {
+app.get('/register', (req, res) => {
   if (req.session.userId) return res.redirect('/profile');
   res.render('register', { title: 'Register', hideNav: true, bodyClass: 'auth-page' });
 });
 
-app.post('/register', async function (req, res, next) {
-  var { username, email, password, confirm } = req.body;
-  var renderErr = function (msg) {
-    res.render('register', {
-      title: 'Register', hideNav: true, bodyClass: 'auth-page',
-      error: msg, username, email
-    });
-  };
+app.post('/register', async (req, res, next) => {
+  const { username, email, password, confirm } = req.body;
+  const renderErr = (msg) => res.render('register', {
+    title: 'Register', hideNav: true, bodyClass: 'auth-page',
+    error: msg, username, email
+  });
 
   if (!username || !email || !password || !confirm) return renderErr('All fields are required.');
-  if (password.length < 8) return renderErr('Password must be at least 8 characters.');
-  if (password !== confirm) return renderErr('Passwords do not match.');
+  if (password.length < 8)    return renderErr('Password must be at least 8 characters.');
+  if (password !== confirm)   return renderErr('Passwords do not match.');
   if (!/^[a-zA-Z0-9_-]{3,20}$/.test(username)) {
     return renderErr('Username must be 3–20 characters and contain only letters, numbers, _ or -.');
   }
 
   try {
-    var existing = await User.findOne({ where: { email } });
-    if (existing) return renderErr('An account with that email already exists.');
-    var takenUsername = await User.findOne({ where: { username } });
-    if (takenUsername) return renderErr('That username is already taken.');
+    if (await User.findOne({ where: { email } }))    return renderErr('An account with that email already exists.');
+    if (await User.findOne({ where: { username } })) return renderErr('That username is already taken.');
 
-    var passwordHash = await bcrypt.hash(password, 12);
-    var user = await User.create({ username, email, passwordHash });
+    const passwordHash = await bcrypt.hash(password, 12);
+    const user = await User.create({ username, email, passwordHash });
     req.session.userId = user.id;
     res.redirect('/profile');
   } catch (e) {
@@ -124,38 +141,258 @@ app.post('/register', async function (req, res, next) {
   }
 });
 
-app.get('/logout', function (req, res, next) {
-  req.session.destroy(function (err) {
+app.get('/logout', (req, res, next) => {
+  req.session.destroy((err) => {
     if (err) return next(err);
     res.redirect('/login');
   });
 });
 
-// ── Protected routes ──────────────────────────────────────────────────────────
+// ── Profile ───────────────────────────────────────────────────────────────────
 
-app.get('/profile', requireAuth, function (req, res) {
-  res.render('profile', { title: res.locals.currentUser.username });
+app.get('/profile', requireAuth, async (req, res, next) => {
+  try {
+    const user = await User.findByPk(req.session.userId);
+
+    const projects = await Project.findAll({
+      where: { ownerId: user.id },
+      include: [{ model: User, as: 'members', attributes: ['id'], through: { attributes: [] } }],
+      order: [['updatedAt', 'DESC']]
+    });
+
+    const contributionCount = await Contribution.count({ where: { userId: user.id } });
+
+    const starredProjects = await Project.findAll({
+      include: [
+        { model: User, as: 'starredBy', where: { id: user.id }, attributes: [], through: { attributes: [] } },
+        { model: User, as: 'owner', attributes: ['username'] }
+      ]
+    });
+
+    const plainProjects = projects.map(p => ({
+      ...p.toJSON(),
+      memberCount: p.members.length,
+      taskCount: 0   // will add real counts when tasks are wired up
+    }));
+
+    res.render('profile', {
+      title: user.username,
+      profileUser: user.toJSON(),
+      projects: plainProjects,
+      projectCount: plainProjects.length,
+      contributionCount,
+      starredProjects: starredProjects.map(p => p.toJSON()),
+      starCount: starredProjects.length,
+      pinnedProjects: plainProjects.slice(0, 3)
+    });
+  } catch (e) {
+    next(e);
+  }
 });
 
-app.get('/project/:id', requireAuth, function (req, res) {
-  res.render('project', { title: 'Brand Refresh 2026' });
+// ── Projects ──────────────────────────────────────────────────────────────────
+
+// IMPORTANT: /project/new must be defined before /project/:id
+app.get('/project/new', requireAuth, (req, res) => {
+  res.render('project-new', { title: 'New Project' });
 });
 
-app.get('/task/:id', requireAuth, function (req, res) {
-  res.render('task', { title: 'Task #1' });
+app.post('/project', requireAuth, async (req, res, next) => {
+  const { title, description } = req.body;
+  if (!title || !title.trim()) {
+    return res.render('project-new', {
+      title: 'New Project',
+      error: 'A project title is required.',
+      description
+    });
+  }
+  try {
+    const project = await Project.create({
+      title: title.trim(),
+      description: description ? description.trim() : null,
+      ownerId: req.session.userId
+    });
+    await ProjectMember.create({ userId: req.session.userId, projectId: project.id, role: 'owner' });
+    res.redirect(`/project/${project.id}`);
+  } catch (e) {
+    next(e);
+  }
 });
 
-app.get('/solution/:id', requireAuth, function (req, res) {
-  res.render('solution', { title: 'Solution #1' });
+app.get('/project/:id', requireAuth, async (req, res, next) => {
+  try {
+    const project = await Project.findByPk(req.params.id, {
+      include: [
+        { model: User, as: 'owner',   attributes: ['id', 'username'] },
+        { model: User, as: 'members', attributes: ['id', 'username'], through: { attributes: ['role'] } }
+      ]
+    });
+    if (!project) return next(createError(404));
+
+    const isMember = project.members.some(m => m.id === req.session.userId);
+    if (!isMember) {
+      return res.status(403).render('error', { message: 'You are not a member of this project.', error: {} });
+    }
+
+    const isOwner   = project.ownerId === req.session.userId;
+    const isStarred = !!(await ProjectStar.findOne({
+      where: { userId: req.session.userId, projectId: project.id }
+    }));
+
+    const tasks = await Task.findAll({
+      where: { projectId: project.id },
+      include: [
+        { model: User,     as: 'creator',   attributes: ['username'] },
+        { model: User,     as: 'assignees', attributes: ['id', 'username'], through: { attributes: [] } },
+        { model: Solution, as: 'solutions', attributes: ['id'] }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
+
+    const solutions = await Solution.findAll({
+      where: { projectId: project.id },
+      include: [
+        { model: User, as: 'submittedBy', attributes: ['username'] },
+        { model: Task, as: 'task',        attributes: ['id', 'title'] }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
+
+    // Contributors sorted by contribution count, with bar widths
+    const rawContributors = await Promise.all(
+      project.members.map(async (m) => {
+        const count = await Contribution.count({ where: { userId: m.id, projectId: project.id } });
+        return { username: m.username, count };
+      })
+    );
+    rawContributors.sort((a, b) => b.count - a.count);
+    const maxCount = rawContributors[0]?.count || 1;
+    const contributors = rawContributors.map((c, i) => ({
+      rank: i + 1,
+      username: c.username,
+      initial: c.username[0].toUpperCase(),
+      count: c.count,
+      barPercent: maxCount > 0 ? Math.round((c.count / maxCount) * 100) : 0
+    }));
+
+    const openTaskCount   = tasks.filter(t => t.status === 'open').length;
+    const closedTaskCount = tasks.filter(t => t.status === 'closed').length;
+
+    res.render('project', {
+      title: project.title,
+      project: project.toJSON(),
+      isOwner,
+      isStarred,
+      tasks: tasks.map(t => {
+        const p = t.toJSON();
+        p.solutionCount = p.solutions ? p.solutions.length : 0;
+        p.isOpen = p.status === 'open';
+        return p;
+      }),
+      solutions: solutions.map(s => {
+        const p = s.toJSON();
+        p.isPending  = p.status === 'pending';
+        p.isApproved = p.status === 'approved';
+        return p;
+      }),
+      contributors,
+      hasTasks:        tasks.length > 0,
+      hasSolutions:    solutions.length > 0,
+      hasContributors: contributors.length > 0,
+      taskCount:    tasks.length,
+      openTaskCount,
+      closedTaskCount,
+      solutionCount: solutions.length,
+      memberCount:   project.members.length
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
+app.get('/project/:id/edit', requireAuth, async (req, res, next) => {
+  try {
+    const project = await Project.findByPk(req.params.id);
+    if (!project) return next(createError(404));
+    if (project.ownerId !== req.session.userId) {
+      return res.status(403).render('error', { message: 'Only the project owner can edit this project.', error: {} });
+    }
+    res.render('project-edit', { title: 'Edit Project', project: project.toJSON() });
+  } catch (e) {
+    next(e);
+  }
+});
+
+app.post('/project/:id/edit', requireAuth, async (req, res, next) => {
+  const { title, description } = req.body;
+  try {
+    const project = await Project.findByPk(req.params.id);
+    if (!project) return next(createError(404));
+    if (project.ownerId !== req.session.userId) {
+      return res.status(403).render('error', { message: 'Only the project owner can edit this project.', error: {} });
+    }
+    if (!title || !title.trim()) {
+      return res.render('project-edit', {
+        title: 'Edit Project', project: project.toJSON(),
+        error: 'A project title is required.'
+      });
+    }
+    await project.update({ title: title.trim(), description: description ? description.trim() : null });
+    await Contribution.create({
+      type: 'project_edited', referenceId: null,
+      userId: req.session.userId, projectId: project.id
+    });
+    res.redirect(`/project/${project.id}`);
+  } catch (e) {
+    next(e);
+  }
+});
+
+app.post('/project/:id/delete', requireAuth, async (req, res, next) => {
+  try {
+    const project = await Project.findByPk(req.params.id);
+    if (!project) return next(createError(404));
+    if (project.ownerId !== req.session.userId) {
+      return res.status(403).render('error', { message: 'Only the project owner can delete this project.', error: {} });
+    }
+    await project.destroy();
+    res.redirect('/profile');
+  } catch (e) {
+    next(e);
+  }
+});
+
+app.post('/project/:id/star', requireAuth, async (req, res, next) => {
+  try {
+    await ProjectStar.findOrCreate({ where: { userId: req.session.userId, projectId: req.params.id } });
+    res.redirect(`/project/${req.params.id}`);
+  } catch (e) { next(e); }
+});
+
+app.post('/project/:id/unstar', requireAuth, async (req, res, next) => {
+  try {
+    await ProjectStar.destroy({ where: { userId: req.session.userId, projectId: req.params.id } });
+    res.redirect(`/project/${req.params.id}`);
+  } catch (e) { next(e); }
+});
+
+// ── Task & Solution placeholders (to be expanded next) ────────────────────────
+
+app.get('/task/:id', requireAuth, (req, res) => {
+  res.render('task', { title: 'Task' });
+});
+
+app.get('/solution/:id', requireAuth, (req, res) => {
+  res.render('solution', { title: 'Solution' });
 });
 
 // ── Error handling ────────────────────────────────────────────────────────────
 
-app.use(function (req, res, next) {
+app.use((req, res, next) => {
   next(createError(404));
 });
 
-app.use(function (err, req, res, next) {
+app.use((err, req, res, next) => {
   res.locals.message = err.message;
   res.locals.error = req.app.get('env') === 'development' ? err : {};
   res.status(err.status || 500);

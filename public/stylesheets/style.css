@@ -352,8 +352,10 @@ textarea.form-input {
   gap: 6px;
   padding: 8px 18px;
   border-radius: var(--radius-pill);
+  font-family: inherit;
   font-size: 13px;
   font-weight: 600;
+  line-height: 1;
   cursor: pointer;
   border: none;
   transition: all var(--transition);
@@ -407,6 +409,7 @@ textarea.form-input {
 .btn-danger {
   background: linear-gradient(180deg, #ff7070 0%, #e53e3e 100%);
   color: white;
+  border: 1.5px solid var(--border);
   box-shadow: 0 2px 8px rgba(229,62,62,.3);
 }
 .btn-danger:hover {

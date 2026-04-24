@@ -1,7 +1,7 @@
-var { DataTypes } = require('sequelize');
-var sequelize = require('../db');
+const { DataTypes } = require('sequelize');
+const sequelize = require('../db');
 
-var User = sequelize.define('User', {
+const User = sequelize.define('User', {
   username: {
     type: DataTypes.STRING,
     allowNull: false,

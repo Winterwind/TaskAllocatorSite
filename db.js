@@ -1,7 +1,7 @@
-var { Sequelize } = require('sequelize');
-var path = require('path');
+const { Sequelize } = require('sequelize');
+const path = require('path');
 
-var sequelize = new Sequelize({
+const sequelize = new Sequelize({
   dialect: 'sqlite',
   storage: path.join(__dirname, 'data', 'dev.sqlite'),
   logging: false

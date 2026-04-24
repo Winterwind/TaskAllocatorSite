@@ -5,28 +5,44 @@
       <div class="project-hero-left">
         <div class="project-title-row">
           <div class="project-icon">✦</div>
-          <h1 class="project-title">Brand Refresh 2026</h1>
+          <h1 class="project-title">{{project.title}}</h1>
         </div>
         <div class="project-owner-line">
-          Owned by <a href="/profile/ariandjahed">ariandjahed</a>
-          &nbsp;·&nbsp; Created Apr 12, 2026
+          Owned by <a href="/profile">{{project.owner.username}}</a>
+          &nbsp;·&nbsp; Created {{formatDate project.createdAt}}
         </div>
-        <p class="project-description">
-          Complete redesign of the company's visual identity — including a new logo, updated color palette,
-          typography system, and comprehensive brand guidelines for all teams.
-        </p>
+        {{#if project.description}}
+          <p class="project-description">{{project.description}}</p>
+        {{else}}
+          <p class="project-description text-muted">No description provided.</p>
+        {{/if}}
       </div>
+
       <div class="project-hero-actions">
-        <button class="btn btn-secondary btn-sm">☆ Star</button>
-        <button class="btn btn-secondary btn-sm">+ Invite</button>
-        <button class="btn btn-primary btn-sm">Edit</button>
+        {{#if isStarred}}
+          <form action="/project/{{project.id}}/unstar" method="POST" style="display:contents">
+            <button class="btn btn-secondary btn-sm">★ Unstar</button>
+          </form>
+        {{else}}
+          <form action="/project/{{project.id}}/star" method="POST" style="display:contents">
+            <button class="btn btn-secondary btn-sm">☆ Star</button>
+          </form>
+        {{/if}}
+        {{#if isOwner}}
+          <a href="/project/{{project.id}}/edit" class="btn btn-secondary btn-sm">Edit</a>
+          <form action="/project/{{project.id}}/delete" method="POST" style="display:contents"
+                onsubmit="return confirm('Delete this project? This cannot be undone.')">
+            <button class="btn btn-danger btn-sm">Delete</button>
+          </form>
+        {{/if}}
       </div>
     </div>
+
     <div class="project-hero-stats">
-      <span class="project-hero-stat"><strong>4</strong> contributors</span>
-      <span class="project-hero-stat"><strong>8</strong> open tasks</span>
-      <span class="project-hero-stat"><strong>5</strong> solutions</span>
-      <span class="project-hero-stat"><strong>3</strong> closed</span>
+      <span class="project-hero-stat"><strong>{{memberCount}}</strong> contributor(s)</span>
+      <span class="project-hero-stat"><strong>{{openTaskCount}}</strong> open task(s)</span>
+      <span class="project-hero-stat"><strong>{{solutionCount}}</strong> solution(s)</span>
+      <span class="project-hero-stat"><strong>{{closedTaskCount}}</strong> closed</span>
     </div>
   </div>
 </div>
@@ -35,13 +51,13 @@
 <div class="subnav">
   <div class="subnav-inner" data-tab-group="project">
     <button class="subnav-tab active" data-tab="tasks">
-      Tasks <span class="tab-count">8</span>
+      Tasks <span class="tab-count">{{taskCount}}</span>
     </button>
     <button class="subnav-tab" data-tab="solutions">
-      Solutions <span class="tab-count">5</span>
+      Solutions <span class="tab-count">{{solutionCount}}</span>
     </button>
     <button class="subnav-tab" data-tab="contributors">
-      Contributors <span class="tab-count">4</span>
+      Contributors <span class="tab-count">{{memberCount}}</span>
     </button>
   </div>
 </div>
@@ -53,228 +69,121 @@
   <div class="tab-panel active" data-tab-panel="project" data-panel="tasks">
     <div class="list-toolbar">
       <div class="filter-group">
-        <button class="filter-btn active">All (8)</button>
-        <button class="filter-btn">Open (5)</button>
-        <button class="filter-btn">Closed (3)</button>
+        <button class="filter-btn active">All ({{taskCount}})</button>
+        <button class="filter-btn">Open ({{openTaskCount}})</button>
+        <button class="filter-btn">Closed ({{closedTaskCount}})</button>
       </div>
-      <a href="/task/new" class="btn btn-primary btn-sm">+ New Task</a>
+      {{#if isOwner}}
+        <a href="/project/{{project.id}}/task/new" class="btn btn-primary btn-sm">+ New Task</a>
+      {{/if}}
     </div>
 
-    <div class="task-list">
-      <div class="task-item">
-        <div class="task-status-dot open"></div>
-        <div class="task-info">
-          <a href="/task/1" class="task-name">Design new logo — three concepts needed</a>
-          <div class="task-meta-line">#1 opened Apr 14 by ariandjahed · 2 solutions</div>
-        </div>
-        <div class="task-right">
-          <span class="badge badge-open">Open</span>
-          <div class="micro-avatar c-av-teal" title="Assigned to Sam">S</div>
-          <div class="micro-avatar c-av-blue" title="Assigned to Maya">M</div>
+    {{#if hasTasks}}
+      <div class="task-list">
+        {{#each tasks}}
+          <div class="task-item">
+            <div class="task-status-dot {{#if isOpen}}open{{else}}closed{{/if}}"></div>
+            <div class="task-info">
+              <a href="/task/{{id}}" class="task-name">{{title}}</a>
+              <div class="task-meta-line">
+                #{{id}} opened {{formatDate createdAt}} by {{creator.username}}
+                · {{solutionCount}} solution{{#gt solutionCount 1}}s{{/gt}}
+              </div>
+            </div>
+            <div class="task-right">
+              <span class="badge {{#if isOpen}}badge-open{{else}}badge-closed{{/if}}">
+                {{#if isOpen}}Open{{else}}Closed{{/if}}
+              </span>
+              {{#each assignees}}
+                <div class="micro-avatar {{avatarColor username}}" title="{{username}}">
+                  {{initial username}}
+                </div>
+              {{/each}}
+            </div>
+          </div>
+        {{/each}}
+      </div>
+    {{else}}
+      <div class="empty-state">
+        <div class="empty-state-icon">◎</div>
+        <div class="empty-state-title">No tasks yet</div>
+        <div class="empty-state-desc">
+          {{#if isOwner}}
+            <a href="/project/{{project.id}}/task/new">Create the first task</a> to get started.
+          {{else}}
+            Tasks will appear here once the project owner creates them.
+          {{/if}}
         </div>
       </div>
-      <div class="task-item">
-        <div class="task-status-dot open"></div>
-        <div class="task-info">
-          <a href="/task/2" class="task-name">Define primary and secondary color palette</a>
-          <div class="task-meta-line">#2 opened Apr 14 by ariandjahed · 1 solution</div>
-        </div>
-        <div class="task-right">
-          <span class="badge badge-open">Open</span>
-          <div class="micro-avatar c-av-green" title="Assigned to Jordan">J</div>
-        </div>
-      </div>
-      <div class="task-item">
-        <div class="task-status-dot open"></div>
-        <div class="task-info">
-          <a href="/task/3" class="task-name">Select typeface pairing for brand system</a>
-          <div class="task-meta-line">#3 opened Apr 15 by mlee · 0 solutions</div>
-        </div>
-        <div class="task-right">
-          <span class="badge badge-open">Open</span>
-        </div>
-      </div>
-      <div class="task-item">
-        <div class="task-status-dot open"></div>
-        <div class="task-info">
-          <a href="/task/4" class="task-name">Write brand voice and tone guidelines</a>
-          <div class="task-meta-line">#4 opened Apr 16 by ariandjahed · 1 solution</div>
-        </div>
-        <div class="task-right">
-          <span class="badge badge-open">Open</span>
-          <div class="micro-avatar c-av-purple" title="Assigned to Priya">P</div>
-        </div>
-      </div>
-      <div class="task-item">
-        <div class="task-status-dot open"></div>
-        <div class="task-info">
-          <a href="/task/5" class="task-name">Create icon set for digital products</a>
-          <div class="task-meta-line">#5 opened Apr 17 by jsmith · 0 solutions</div>
-        </div>
-        <div class="task-right">
-          <span class="badge badge-open">Open</span>
-        </div>
-      </div>
-      <div class="task-item">
-        <div class="task-status-dot closed"></div>
-        <div class="task-info">
-          <a href="/task/6" class="task-name">Audit existing brand materials for inconsistencies</a>
-          <div class="task-meta-line">#6 closed Apr 13 by ariandjahed · 1 solution approved</div>
-        </div>
-        <div class="task-right">
-          <span class="badge badge-closed">Closed</span>
-        </div>
-      </div>
-      <div class="task-item">
-        <div class="task-status-dot closed"></div>
-        <div class="task-info">
-          <a href="/task/7" class="task-name">Stakeholder alignment meeting — brief document</a>
-          <div class="task-meta-line">#7 closed Apr 12 by ariandjahed · 1 solution approved</div>
-        </div>
-        <div class="task-right">
-          <span class="badge badge-closed">Closed</span>
-        </div>
-      </div>
-      <div class="task-item">
-        <div class="task-status-dot closed"></div>
-        <div class="task-info">
-          <a href="/task/8" class="task-name">Competitor brand analysis</a>
-          <div class="task-meta-line">#8 closed Apr 11 by mlee · 1 solution approved</div>
-        </div>
-        <div class="task-right">
-          <span class="badge badge-closed">Closed</span>
-        </div>
-      </div>
-    </div>
+    {{/if}}
   </div>
 
   <!-- Solutions Tab -->
   <div class="tab-panel" data-tab-panel="project" data-panel="solutions">
     <div class="list-toolbar">
       <div class="filter-group">
-        <button class="filter-btn active">All (5)</button>
-        <button class="filter-btn">Pending (2)</button>
-        <button class="filter-btn">Approved (3)</button>
+        <button class="filter-btn active">All ({{solutionCount}})</button>
+        <button class="filter-btn">Pending</button>
+        <button class="filter-btn">Approved</button>
       </div>
-      <a href="/solution/new" class="btn btn-primary btn-sm">+ New Solution</a>
     </div>
 
-    <div class="solution-list">
-      <div class="solution-item">
-        <div class="solution-item-dot pending"></div>
-        <div class="solution-item-info">
-          <a href="/solution/1" class="solution-item-name">Logo Concept A — Geometric Mark</a>
-          <div class="solution-item-meta">
-            By <strong>Sam Chen</strong> · Apr 15 · 2 files attached
-            &nbsp;·&nbsp;
-            <a href="/task/1" class="solution-item-task-link">→ Task #1</a>
-            <span class="badge badge-pending">Pending</span>
+    {{#if hasSolutions}}
+      <div class="solution-list">
+        {{#each solutions}}
+          <div class="solution-item">
+            <div class="solution-item-dot {{#if isApproved}}approved{{else}}pending{{/if}}"></div>
+            <div class="solution-item-info">
+              <a href="/solution/{{id}}" class="solution-item-name">{{title}}</a>
+              <div class="solution-item-meta">
+                By <strong>{{submittedBy.username}}</strong> · {{formatDate createdAt}}
+                &nbsp;·&nbsp;
+                <a href="/task/{{task.id}}" class="solution-item-task-link">→ {{task.title}}</a>
+                <span class="badge {{#if isApproved}}badge-approved{{else}}badge-pending{{/if}}">
+                  {{status}}
+                </span>
+              </div>
+            </div>
           </div>
-        </div>
+        {{/each}}
       </div>
-      <div class="solution-item">
-        <div class="solution-item-dot pending"></div>
-        <div class="solution-item-info">
-          <a href="/solution/2" class="solution-item-name">Logo Concept B — Wordmark</a>
-          <div class="solution-item-meta">
-            By <strong>Maya Patel</strong> · Apr 16 · 3 files attached
-            &nbsp;·&nbsp;
-            <a href="/task/1" class="solution-item-task-link">→ Task #1</a>
-            <span class="badge badge-pending">Pending</span>
-          </div>
-        </div>
+    {{else}}
+      <div class="empty-state">
+        <div class="empty-state-icon">◈</div>
+        <div class="empty-state-title">No solutions yet</div>
+        <div class="empty-state-desc">Solutions will appear here once contributors submit them to open tasks.</div>
       </div>
-      <div class="solution-item">
-        <div class="solution-item-dot approved"></div>
-        <div class="solution-item-info">
-          <a href="/solution/3" class="solution-item-name">Color Palette Proposal — Teal & Slate</a>
-          <div class="solution-item-meta">
-            By <strong>Jordan Lee</strong> · Apr 14 · 1 file attached
-            &nbsp;·&nbsp;
-            <a href="/task/2" class="solution-item-task-link">→ Task #2</a>
-            <span class="badge badge-approved">Approved</span>
-          </div>
-        </div>
-      </div>
-      <div class="solution-item">
-        <div class="solution-item-dot approved"></div>
-        <div class="solution-item-info">
-          <a href="/solution/4" class="solution-item-name">Full Brand Audit Report</a>
-          <div class="solution-item-meta">
-            By <strong>ariandjahed</strong> · Apr 13 · 1 file attached
-            &nbsp;·&nbsp;
-            <a href="/task/6" class="solution-item-task-link">→ Task #6</a>
-            <span class="badge badge-approved">Approved</span>
-          </div>
-        </div>
-      </div>
-      <div class="solution-item">
-        <div class="solution-item-dot approved"></div>
-        <div class="solution-item-info">
-          <a href="/solution/5" class="solution-item-name">Competitor Analysis Deck</a>
-          <div class="solution-item-meta">
-            By <strong>Maya Patel</strong> · Apr 11 · 1 file attached
-            &nbsp;·&nbsp;
-            <a href="/task/8" class="solution-item-task-link">→ Task #8</a>
-            <span class="badge badge-approved">Approved</span>
-          </div>
-        </div>
-      </div>
-    </div>
+    {{/if}}
   </div>
 
   <!-- Contributors Tab -->
   <div class="tab-panel" data-tab-panel="project" data-panel="contributors">
-    <div class="contributors-list">
-      <div class="contributor-row">
-        <span class="contributor-rank r1">1</span>
-        <div class="contributor-avatar c-av-teal">A</div>
-        <div class="contributor-info">
-          <div class="contributor-name">Arian Djahed</div>
-          <div class="contributor-handle">@ariandjahed</div>
-        </div>
-        <div class="contributor-bar-track">
-          <div class="contributor-bar-fill" style="width:100%"></div>
-        </div>
-        <div class="contributor-count">18 <span>contributions</span></div>
+    {{#if hasContributors}}
+      <div class="contributors-list">
+        {{#each contributors}}
+          <div class="contributor-row">
+            <span class="contributor-rank {{#eq rank 1}}r1{{/eq}}{{#eq rank 2}}r2{{/eq}}{{#eq rank 3}}r3{{/eq}}">
+              {{rank}}
+            </span>
+            <div class="contributor-avatar {{avatarColor username}}">{{initial username}}</div>
+            <div class="contributor-info">
+              <div class="contributor-name">{{username}}</div>
+              <div class="contributor-handle">@{{username}}</div>
+            </div>
+            <div class="contributor-bar-track">
+              <div class="contributor-bar-fill" style="width:{{barPercent}}%"></div>
+            </div>
+            <div class="contributor-count">{{count}} <span>contributions</span></div>
+          </div>
+        {{/each}}
       </div>
-      <div class="contributor-row">
-        <span class="contributor-rank r2">2</span>
-        <div class="contributor-avatar c-av-blue">M</div>
-        <div class="contributor-info">
-          <div class="contributor-name">Maya Patel</div>
-          <div class="contributor-handle">@mpatel</div>
-        </div>
-        <div class="contributor-bar-track">
-          <div class="contributor-bar-fill" style="width:72%"></div>
-        </div>
-        <div class="contributor-count">13 <span>contributions</span></div>
+    {{else}}
+      <div class="empty-state">
+        <div class="empty-state-icon">◉</div>
+        <div class="empty-state-title">No contributions yet</div>
+        <div class="empty-state-desc">Contributions are logged when tasks are created, solutions are submitted, or the project is edited.</div>
       </div>
-      <div class="contributor-row">
-        <span class="contributor-rank r3">3</span>
-        <div class="contributor-avatar c-av-green">J</div>
-        <div class="contributor-info">
-          <div class="contributor-name">Jordan Lee</div>
-          <div class="contributor-handle">@jlee</div>
-        </div>
-        <div class="contributor-bar-track">
-          <div class="contributor-bar-fill" style="width:44%"></div>
-        </div>
-        <div class="contributor-count">8 <span>contributions</span></div>
-      </div>
-      <div class="contributor-row">
-        <span class="contributor-rank">4</span>
-        <div class="contributor-avatar c-av-purple">S</div>
-        <div class="contributor-info">
-          <div class="contributor-name">Sam Chen</div>
-          <div class="contributor-handle">@schen</div>
-        </div>
-        <div class="contributor-bar-track">
-          <div class="contributor-bar-fill" style="width:22%"></div>
-        </div>
-        <div class="contributor-count">4 <span>contributions</span></div>
-      </div>
-    </div>
+    {{/if}}
   </div>
 
 </div>

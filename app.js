@@ -170,10 +170,35 @@ app.get('/profile', requireAuth, async (req, res, next) => {
       ]
     });
 
+    // Heatmap: per-day contribution counts for the last 364 days
+    const heatNow = new Date();
+    const heatStart = new Date(heatNow);
+    heatStart.setDate(heatNow.getDate() - 363);
+
+    const heatRows = await Contribution.findAll({
+      where: { userId: user.id, createdAt: { [Op.gte]: heatStart } },
+      attributes: [
+        [sequelize.fn('strftime', '%Y-%m-%d', sequelize.col('createdAt')), 'day'],
+        [sequelize.fn('COUNT', sequelize.col('id')), 'cnt']
+      ],
+      group: [sequelize.fn('strftime', '%Y-%m-%d', sequelize.col('createdAt'))],
+      raw: true
+    });
+
+    const heatDayMap = {};
+    heatRows.forEach(r => { heatDayMap[r.day] = parseInt(r.cnt); });
+
+    const heatmapData = [];
+    for (let i = 363; i >= 0; i--) {
+      const d = new Date(heatNow); d.setDate(heatNow.getDate() - i);
+      heatmapData.push(heatDayMap[d.toISOString().slice(0, 10)] || 0);
+    }
+
+    const yearContribCount = heatmapData.reduce((sum, v) => sum + v, 0);
+
     const plainProjects = projects.map(p => ({
       ...p.toJSON(),
-      memberCount: p.members.length,
-      taskCount: 0   // will add real counts when tasks are wired up
+      memberCount: p.members.length
     }));
 
     res.render('profile', {
@@ -182,6 +207,8 @@ app.get('/profile', requireAuth, async (req, res, next) => {
       projects: plainProjects,
       projectCount: plainProjects.length,
       contributionCount,
+      yearContribCount,
+      heatmapJson: JSON.stringify(heatmapData),
       starredProjects: starredProjects.map(p => p.toJSON()),
       starCount: starredProjects.length,
       pinnedProjects: plainProjects.slice(0, 3)

@@ -25,6 +25,44 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 
+  // Avatar dropdown menu
+  const avatarTrigger  = document.getElementById('avatar-trigger');
+  const avatarDropdown = document.getElementById('avatar-dropdown');
+
+  if (avatarTrigger && avatarDropdown) {
+    avatarTrigger.addEventListener('click', function (e) {
+      e.stopPropagation();
+      const isOpen = avatarDropdown.classList.toggle('open');
+      avatarTrigger.setAttribute('aria-expanded', String(isOpen));
+    });
+
+    document.addEventListener('click', function () {
+      if (avatarDropdown.classList.contains('open')) {
+        avatarDropdown.classList.remove('open');
+        avatarTrigger.setAttribute('aria-expanded', 'false');
+      }
+    });
+  }
+
+  // List filtering — wires up .filter-group[data-filter-target] buttons
+  document.querySelectorAll('.filter-group[data-filter-target]').forEach(function (group) {
+    const panel = group.closest('.tab-panel');
+    const list  = (panel || document).querySelector(group.dataset.filterTarget);
+    if (!list) return;
+
+    group.querySelectorAll('[data-filter]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        group.querySelectorAll('[data-filter]').forEach(function (b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+
+        const filter = btn.dataset.filter;
+        list.querySelectorAll('[data-status]').forEach(function (item) {
+          item.style.display = (filter === 'all' || item.dataset.status === filter) ? '' : 'none';
+        });
+      });
+    });
+  });
+
   // Activity heatmap — fills .heatmap-grid using real contribution counts
   const heatTip = document.createElement('div');
   heatTip.className = 'heatmap-tooltip';

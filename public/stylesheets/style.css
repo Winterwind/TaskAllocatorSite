@@ -127,12 +127,14 @@ img { display: block; max-width: 100%; }
 }
 .search-input::placeholder { color: var(--text-muted); }
 
-.topbar-avatar-link { text-decoration: none; }
+.avatar-menu { position: relative; }
 
 .topbar-avatar {
   width: 33px;
   height: 33px;
   border-radius: 50%;
+  border: none;
+  padding: 0;
   background: linear-gradient(135deg, #3dd6be 0%, #1589a2 100%);
   display: flex;
   align-items: center;
@@ -142,11 +144,59 @@ img { display: block; max-width: 100%; }
   font-size: 13px;
   box-shadow: 0 2px 7px rgba(26,171,150,.38);
   cursor: pointer;
+  flex-shrink: 0;
   transition: transform var(--transition), box-shadow var(--transition);
 }
 .topbar-avatar:hover {
   transform: scale(1.07);
   box-shadow: 0 3px 12px rgba(26,171,150,.48);
+}
+
+.avatar-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 18px rgba(0,0,0,.13);
+  min-width: 160px;
+  padding: 4px 0;
+  z-index: 200;
+  opacity: 0;
+  transform: translateY(-4px);
+  pointer-events: none;
+  transition: opacity 0.14s, transform 0.14s;
+}
+.avatar-dropdown.open {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.avatar-dropdown-item {
+  display: block;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  text-decoration: none;
+  transition: background-color var(--transition), color var(--transition);
+}
+.avatar-dropdown-item:hover {
+  background: var(--teal-light);
+  color: var(--teal);
+}
+.avatar-dropdown-item--danger { color: var(--text-secondary); }
+.avatar-dropdown-item--danger:hover {
+  background: #fdf0ee;
+  color: #c0392b;
+}
+
+.avatar-dropdown-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
 }
 
 /* ============================================================
@@ -959,6 +1009,7 @@ textarea.form-input {
 }
 .solution-item-dot.approved { background: var(--green); box-shadow: 0 1px 4px rgba(85,184,118,.4); }
 .solution-item-dot.pending  { background: #e0b030; box-shadow: 0 1px 4px rgba(224,176,48,.4); }
+.solution-item-dot.rejected { background: #e53e3e; box-shadow: 0 1px 4px rgba(229,62,62,.4); }
 
 .solution-item-info { flex: 1; }
 

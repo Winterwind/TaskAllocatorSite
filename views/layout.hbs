@@ -31,9 +31,16 @@
             </svg>
             <input type="search" class="search-input" placeholder="Search projects, tasks…" />
           </div>
-          <a href="/profile" class="topbar-avatar-link">
-            <div class="topbar-avatar">{{avatarInitial}}</div>
-          </a>
+          <div class="avatar-menu" id="avatar-menu">
+            <button class="topbar-avatar" id="avatar-trigger" aria-haspopup="true" aria-expanded="false">
+              {{avatarInitial}}
+            </button>
+            <div class="avatar-dropdown" id="avatar-dropdown" role="menu">
+              <a href="/profile" class="avatar-dropdown-item">Profile</a>
+              <div class="avatar-dropdown-divider"></div>
+              <a href="/logout" class="avatar-dropdown-item avatar-dropdown-item--danger">Log out</a>
+            </div>
+          </div>
         </div>
       </div>
     </header>

@@ -68,10 +68,10 @@
   <!-- Tasks Tab -->
   <div class="tab-panel active" data-tab-panel="project" data-panel="tasks">
     <div class="list-toolbar">
-      <div class="filter-group">
-        <button class="filter-btn active">All ({{taskCount}})</button>
-        <button class="filter-btn">Open ({{openTaskCount}})</button>
-        <button class="filter-btn">Closed ({{closedTaskCount}})</button>
+      <div class="filter-group" data-filter-target=".task-list">
+        <button class="filter-btn active" data-filter="all">All ({{taskCount}})</button>
+        <button class="filter-btn" data-filter="open">Open ({{openTaskCount}})</button>
+        <button class="filter-btn" data-filter="closed">Closed ({{closedTaskCount}})</button>
       </div>
       {{#if isOwner}}
         <a href="/project/{{project.id}}/task/new" class="btn btn-primary btn-sm">+ New Task</a>
@@ -81,7 +81,7 @@
     {{#if hasTasks}}
       <div class="task-list">
         {{#each tasks}}
-          <div class="task-item">
+          <div class="task-item" data-status="{{#if isOpen}}open{{else}}closed{{/if}}">
             <div class="task-status-dot {{#if isOpen}}open{{else}}closed{{/if}}"></div>
             <div class="task-info">
               <a href="/task/{{id}}" class="task-name">{{title}}</a>
@@ -121,25 +121,26 @@
   <!-- Solutions Tab -->
   <div class="tab-panel" data-tab-panel="project" data-panel="solutions">
     <div class="list-toolbar">
-      <div class="filter-group">
-        <button class="filter-btn active">All ({{solutionCount}})</button>
-        <button class="filter-btn">Pending</button>
-        <button class="filter-btn">Approved</button>
+      <div class="filter-group" data-filter-target=".solution-list">
+        <button class="filter-btn active" data-filter="all">All ({{solutionCount}})</button>
+        <button class="filter-btn" data-filter="pending">Pending</button>
+        <button class="filter-btn" data-filter="approved">Approved</button>
+        <button class="filter-btn" data-filter="rejected">Rejected</button>
       </div>
     </div>
 
     {{#if hasSolutions}}
       <div class="solution-list">
         {{#each solutions}}
-          <div class="solution-item">
-            <div class="solution-item-dot {{#if isApproved}}approved{{else}}pending{{/if}}"></div>
+          <div class="solution-item" data-status="{{status}}">
+            <div class="solution-item-dot {{#if isApproved}}approved{{else}}{{#if isRejected}}rejected{{else}}pending{{/if}}{{/if}}"></div>
             <div class="solution-item-info">
               <a href="/solution/{{id}}" class="solution-item-name">{{title}}</a>
               <div class="solution-item-meta">
                 By <strong>{{submittedBy.username}}</strong> · {{formatDate createdAt}}
                 &nbsp;·&nbsp;
                 <a href="/task/{{task.id}}" class="solution-item-task-link">→ {{task.title}}</a>
-                <span class="badge {{#if isApproved}}badge-approved{{else}}badge-pending{{/if}}">
+                <span class="badge {{#if isApproved}}badge-approved{{else}}{{#if isRejected}}badge-rejected{{else}}badge-pending{{/if}}{{/if}}">
                   {{status}}
                 </span>
               </div>
@@ -190,7 +191,6 @@
               <div class="contributor-avatar {{avatarColor username}}">{{initial username}}</div>
               <div class="contributor-info">
                 <div class="contributor-name">{{username}}</div>
-                <div class="contributor-handle">@{{username}}</div>
               </div>
               <div class="contributor-bar-track">
                 <div class="contributor-bar-fill" style="width:{{barPercent}}%"></div>

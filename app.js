@@ -105,7 +105,7 @@ app.use(async (req, res, next) => {
   if (req.session.userId) {
     try {
       const user = await User.findByPk(req.session.userId, {
-        attributes: ['id', 'username', 'email']
+        attributes: ['id', 'username'/*, 'email'*/]
       });
       if (user) {
         res.locals.currentUser = user;
@@ -134,13 +134,13 @@ app.get('/login', (req, res) => {
 });
 
 app.post('/login', async (req, res, next) => {
-  const { email, password } = req.body;
+  const { username, password } = req.body;
   try {
-    const user = await User.findOne({ where: { email } });
+    const user = await User.findOne({ where: { username } });
     if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
       return res.render('login', {
         title: 'Sign In', hideNav: true, bodyClass: 'auth-page',
-        error: 'Invalid email or password.', email
+        error: 'Invalid username or password.', username
       });
     }
     req.session.userId = user.id;
@@ -156,13 +156,13 @@ app.get('/register', (req, res) => {
 });
 
 app.post('/register', async (req, res, next) => {
-  const { username, email, password, confirm } = req.body;
+  const { username, /*email,*/ password, confirm } = req.body;
   const renderErr = (msg) => res.render('register', {
     title: 'Register', hideNav: true, bodyClass: 'auth-page',
-    error: msg, username, email
+    error: msg, username/*, email*/
   });
 
-  if (!username || !email || !password || !confirm) return renderErr('All fields are required.');
+  if (!username || /*!email ||*/ !password || !confirm) return renderErr('All fields are required.');
   if (password.length < 8)    return renderErr('Password must be at least 8 characters.');
   if (password !== confirm)   return renderErr('Passwords do not match.');
   if (!/^[a-zA-Z0-9_-]{3,20}$/.test(username)) {
@@ -170,11 +170,11 @@ app.post('/register', async (req, res, next) => {
   }
 
   try {
-    if (await User.findOne({ where: { email } }))    return renderErr('An account with that email already exists.');
+    // if (await User.findOne({ where: { email } }))    return renderErr('An account with that email already exists.');
     if (await User.findOne({ where: { username } })) return renderErr('That username is already taken.');
 
     const passwordHash = await bcrypt.hash(password, 12);
-    const user = await User.create({ username, email, passwordHash });
+    const user = await User.create({ username, /*email,*/ passwordHash });
     req.session.userId = user.id;
     res.redirect('/profile');
   } catch (e) {
@@ -411,6 +411,7 @@ app.get('/project/:id', requireAuth, async (req, res, next) => {
         const p = s.toJSON();
         p.isPending  = p.status === 'pending';
         p.isApproved = p.status === 'approved';
+        p.isRejected = p.status === 'rejected';
         return p;
       }),
       contributors,

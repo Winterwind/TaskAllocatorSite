@@ -10,6 +10,7 @@ const SequelizeStore = require('connect-session-sequelize')(session.Store);
 const bcrypt = require('bcrypt');
 const hbs = require('hbs');
 
+const { Op } = require('sequelize');
 const sequelize = require('./db');
 const { User, Project, ProjectMember, ProjectStar, Task, TaskAssignee, Solution, SolutionFile, Contribution } = require('./models/index');
 
@@ -258,11 +259,56 @@ app.get('/project/:id', requireAuth, async (req, res, next) => {
       order: [['createdAt', 'DESC']]
     });
 
-    // Contributors sorted by contribution count, with bar widths
+    // Contributors sorted by contribution count, with bar widths + chart data
+    const now = new Date();
+    const fiftySixDaysAgo = new Date(now);
+    fiftySixDaysAgo.setDate(now.getDate() - 56);
+
     const rawContributors = await Promise.all(
       project.members.map(async (m) => {
         const count = await Contribution.count({ where: { userId: m.id, projectId: project.id } });
-        return { username: m.username, count };
+
+        // Fetch per-day counts for the last 56 days (covers 8 weeks + daily 30-day view)
+        const dailyRows = await Contribution.findAll({
+          where: {
+            userId: m.id,
+            projectId: project.id,
+            createdAt: { [Op.gte]: fiftySixDaysAgo }
+          },
+          attributes: [
+            [sequelize.fn('strftime', '%Y-%m-%d', sequelize.col('createdAt')), 'day'],
+            [sequelize.fn('COUNT', sequelize.col('id')), 'cnt']
+          ],
+          group: [sequelize.fn('strftime', '%Y-%m-%d', sequelize.col('createdAt'))],
+          raw: true
+        });
+
+        const dayMap = {};
+        dailyRows.forEach(r => { dayMap[r.day] = parseInt(r.cnt); });
+
+        // 30-day daily array
+        const dailyLabels = [], dailyData = [];
+        for (let i = 29; i >= 0; i--) {
+          const d = new Date(now); d.setDate(now.getDate() - i);
+          const key = d.toISOString().slice(0, 10);
+          dailyLabels.push(key.slice(5)); // MM-DD
+          dailyData.push(dayMap[key] || 0);
+        }
+
+        // 8-week weekly array (aggregated from daily data)
+        const weeklyLabels = [], weeklyData = [];
+        for (let w = 7; w >= 0; w--) {
+          let weekTotal = 0;
+          for (let d = 0; d < 7; d++) {
+            const day = new Date(now); day.setDate(now.getDate() - (w * 7 + d));
+            weekTotal += dayMap[day.toISOString().slice(0, 10)] || 0;
+          }
+          const firstDay = new Date(now); firstDay.setDate(now.getDate() - (w * 7 + 6));
+          weeklyLabels.push(`${firstDay.getMonth() + 1}/${firstDay.getDate()}`);
+          weeklyData.push(weekTotal);
+        }
+
+        return { username: m.username, count, dailyLabels, dailyData, weeklyLabels, weeklyData };
       })
     );
     rawContributors.sort((a, b) => b.count - a.count);
@@ -270,9 +316,12 @@ app.get('/project/:id', requireAuth, async (req, res, next) => {
     const contributors = rawContributors.map((c, i) => ({
       rank: i + 1,
       username: c.username,
-      initial: c.username[0].toUpperCase(),
       count: c.count,
-      barPercent: maxCount > 0 ? Math.round((c.count / maxCount) * 100) : 0
+      barPercent: maxCount > 0 ? Math.round((c.count / maxCount) * 100) : 0,
+      chartDailyLabels:  JSON.stringify(c.dailyLabels),
+      chartDailyData:    JSON.stringify(c.dailyData),
+      chartWeeklyLabels: JSON.stringify(c.weeklyLabels),
+      chartWeeklyData:   JSON.stringify(c.weeklyData)
     }));
 
     const openTaskCount   = tasks.filter(t => t.status === 'open').length;

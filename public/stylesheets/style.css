@@ -1058,6 +1058,76 @@ textarea.form-input {
   margin-left: 2px;
 }
 
+/* Contributor card — wraps row + chart */
+.contributor-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+/* When inside a card, strip the row's own border/bg/shadow */
+.contributor-card .contributor-row {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.contributor-chart-wrap {
+  padding: 8px 16px 10px;
+  height: 76px;
+  position: relative;
+}
+
+.contributor-chart {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Period toggle above contributors list */
+.contrib-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.contrib-period-label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.contrib-toggle {
+  display: flex;
+  background: var(--teal-light);
+  border-radius: var(--radius-pill);
+  padding: 2px;
+  gap: 2px;
+}
+
+.contrib-toggle-btn {
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-pill);
+  padding: 3px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: background-color var(--transition), color var(--transition);
+  font-family: inherit;
+  line-height: 1;
+}
+
+.contrib-toggle-btn.active {
+  background: white;
+  color: var(--teal);
+  box-shadow: 0 1px 3px rgba(0,0,0,.12);
+}
+
 /* ============================================================
    Detail Pages (Task / Solution)
    ============================================================ */

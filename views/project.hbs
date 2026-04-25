@@ -159,21 +159,37 @@
   <!-- Contributors Tab -->
   <div class="tab-panel" data-tab-panel="project" data-panel="contributors">
     {{#if hasContributors}}
+      <div class="contrib-toolbar">
+        <span class="contrib-period-label">Activity period:</span>
+        <div class="contrib-toggle" id="contrib-toggle">
+          <button class="contrib-toggle-btn active" data-period="daily">30 Days</button>
+          <button class="contrib-toggle-btn" data-period="weekly">8 Weeks</button>
+        </div>
+      </div>
       <div class="contributors-list">
         {{#each contributors}}
-          <div class="contributor-row">
-            <span class="contributor-rank {{#eq rank 1}}r1{{/eq}}{{#eq rank 2}}r2{{/eq}}{{#eq rank 3}}r3{{/eq}}">
-              {{rank}}
-            </span>
-            <div class="contributor-avatar {{avatarColor username}}">{{initial username}}</div>
-            <div class="contributor-info">
-              <div class="contributor-name">{{username}}</div>
-              <div class="contributor-handle">@{{username}}</div>
+          <div class="contributor-card">
+            <div class="contributor-row">
+              <span class="contributor-rank {{#eq rank 1}}r1{{/eq}}{{#eq rank 2}}r2{{/eq}}{{#eq rank 3}}r3{{/eq}}">
+                {{rank}}
+              </span>
+              <div class="contributor-avatar {{avatarColor username}}">{{initial username}}</div>
+              <div class="contributor-info">
+                <div class="contributor-name">{{username}}</div>
+                <div class="contributor-handle">@{{username}}</div>
+              </div>
+              <div class="contributor-bar-track">
+                <div class="contributor-bar-fill" style="width:{{barPercent}}%"></div>
+              </div>
+              <div class="contributor-count">{{count}} <span>contributions</span></div>
             </div>
-            <div class="contributor-bar-track">
-              <div class="contributor-bar-fill" style="width:{{barPercent}}%"></div>
+            <div class="contributor-chart-wrap">
+              <canvas class="contributor-chart"
+                      data-daily-labels='{{{chartDailyLabels}}}'
+                      data-daily-values='{{{chartDailyData}}}'
+                      data-weekly-labels='{{{chartWeeklyLabels}}}'
+                      data-weekly-values='{{{chartWeeklyData}}}'></canvas>
             </div>
-            <div class="contributor-count">{{count}} <span>contributions</span></div>
           </div>
         {{/each}}
       </div>

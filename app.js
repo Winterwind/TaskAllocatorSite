@@ -195,11 +195,20 @@ app.get('/profile', requireAuth, async (req, res, next) => {
   try {
     const user = await User.findByPk(req.session.userId);
 
-    const projects = await Project.findAll({
-      where: { ownerId: user.id },
-      include: [{ model: User, as: 'members', attributes: ['id'], through: { attributes: [] } }],
-      order: [['updatedAt', 'DESC']]
-    });
+    // Fetch all projects the user is a member of (owned or invited)
+    const memberships = await ProjectMember.findAll({ where: { userId: user.id } });
+    const memberProjectIds = memberships.map(m => m.projectId);
+
+    const projects = memberProjectIds.length > 0
+      ? await Project.findAll({
+          where: { id: { [Op.in]: memberProjectIds } },
+          include: [
+            { model: User, as: 'members', attributes: ['id'], through: { attributes: [] } },
+            { model: User, as: 'owner', attributes: ['username'] }
+          ],
+          order: [['updatedAt', 'DESC']]
+        })
+      : [];
 
     const contributionCount = await Contribution.count({ where: { userId: user.id } });
 
@@ -211,34 +220,45 @@ app.get('/profile', requireAuth, async (req, res, next) => {
     });
 
     // Heatmap: per-day contribution counts for the last 364 days
-    const heatNow = new Date();
-    const heatStart = new Date(heatNow);
-    heatStart.setDate(heatNow.getDate() - 363);
+    // Use local dates throughout so "today" matches the server's wall-clock date.
+    // SQLite datetime(x,'localtime') converts stored UTC timestamps to local time
+    // before strftime extracts the date, keeping both sides in sync.
+    const heatNow  = new Date();
+    const heatStart = new Date(heatNow.getFullYear(), heatNow.getMonth(), heatNow.getDate() - 364);
+
+    const localDateKey = (d) =>
+      d.getFullYear() + '-' +
+      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0');
 
     const heatRows = await Contribution.findAll({
       where: { userId: user.id, createdAt: { [Op.gte]: heatStart } },
       attributes: [
-        [sequelize.fn('strftime', '%Y-%m-%d', sequelize.col('createdAt')), 'day'],
+        [sequelize.fn('strftime', '%Y-%m-%d',
+          sequelize.fn('datetime', sequelize.col('createdAt'), 'localtime')), 'day'],
         [sequelize.fn('COUNT', sequelize.col('id')), 'cnt']
       ],
-      group: [sequelize.fn('strftime', '%Y-%m-%d', sequelize.col('createdAt'))],
+      group: [sequelize.fn('strftime', '%Y-%m-%d',
+        sequelize.fn('datetime', sequelize.col('createdAt'), 'localtime'))],
       raw: true
     });
 
     const heatDayMap = {};
     heatRows.forEach(r => { heatDayMap[r.day] = parseInt(r.cnt); });
 
+    // Build exactly 364 entries using local dates: index 0 = 363 days ago, index 363 = today
     const heatmapData = [];
     for (let i = 363; i >= 0; i--) {
-      const d = new Date(heatNow); d.setDate(heatNow.getDate() - i);
-      heatmapData.push(heatDayMap[d.toISOString().slice(0, 10)] || 0);
+      const d = new Date(heatNow.getFullYear(), heatNow.getMonth(), heatNow.getDate() - i);
+      heatmapData.push(heatDayMap[localDateKey(d)] || 0);
     }
 
     const yearContribCount = heatmapData.reduce((sum, v) => sum + v, 0);
 
     const plainProjects = projects.map(p => ({
       ...p.toJSON(),
-      memberCount: p.members.length
+      memberCount: p.members.length,
+      isOwned: p.ownerId === user.id
     }));
 
     res.render('profile', {

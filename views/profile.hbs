@@ -57,11 +57,14 @@
   <!-- Overview -->
   <div class="tab-panel active" data-tab-panel="profile" data-panel="overview">
     {{#if pinnedProjects.length}}
-      <p class="text-sm text-muted" style="margin-bottom:14px;">Created Projects</p>
+      <p class="text-sm text-muted" style="margin-bottom:14px;">Your Projects</p>
       <div class="pinned-grid">
         {{#each pinnedProjects}}
           <div class="project-card">
             <div class="project-card-main">
+              {{#unless isOwned}}
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:3px;">{{owner.username}} /</div>
+              {{/unless}}
               <a href="/project/{{id}}" class="project-card-name">{{title}}</a>
               <div class="project-card-desc">
                 {{#if description}}{{description}}{{else}}No description.{{/if}}
@@ -118,12 +121,19 @@
         {{#each projects}}
           <div class="project-card">
             <div class="project-card-main">
+              {{#unless isOwned}}
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:3px;">{{owner.username}} /</div>
+              {{/unless}}
               <a href="/project/{{id}}" class="project-card-name">{{title}}</a>
               <div class="project-card-desc">
                 {{#if description}}{{description}}{{else}}No description.{{/if}}
               </div>
               <div class="project-card-footer">
-                <span class="badge badge-open">Open</span>
+                {{#if isOwned}}
+                  <span class="badge badge-open">Owner</span>
+                {{else}}
+                  <span class="badge badge-pending">Member</span>
+                {{/if}}
                 <span class="project-card-stat">{{memberCount}} contributor(s)</span>
                 <span class="project-card-stat">Updated {{formatDate updatedAt}}</span>
               </div>

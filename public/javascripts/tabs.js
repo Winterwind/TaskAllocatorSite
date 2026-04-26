@@ -82,12 +82,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const data = (Array.isArray(counts) && counts.length === 364) ? counts : null;
 
-    // Build UTC date strings for each cell (oldest → newest, matching server array)
+    // Build local date strings for each cell (oldest → newest, matching server array)
     const cellDates = [];
     const ref = new Date();
     for (let i = 363; i >= 0; i--) {
-      const d = new Date(Date.UTC(ref.getUTCFullYear(), ref.getUTCMonth(), ref.getUTCDate() - i));
-      cellDates.push(d.toISOString().slice(0, 10));
+      const d = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate() - i);
+      cellDates.push(
+        d.getFullYear() + '-' +
+        String(d.getMonth() + 1).padStart(2, '0') + '-' +
+        String(d.getDate()).padStart(2, '0')
+      );
     }
 
     for (let i = 0; i < 364; i++) {

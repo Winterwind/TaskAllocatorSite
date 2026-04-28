@@ -131,6 +131,10 @@ app.get('/', (req, res) => {
   res.redirect(req.session.userId ? '/profile' : '/login');
 });
 
+app.get('/demo', (req, res) => {
+  res.render('video', { title: 'Demo — TaskSpace', hideNav: true, bodyClass: 'auth-page' });
+});
+
 app.get('/login', (req, res) => {
   if (req.session.userId) return res.redirect('/profile');
   res.render('login', { title: 'Sign In', hideNav: true, bodyClass: 'auth-page' });
